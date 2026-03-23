@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>3D Druck Verwaltung</title>
+  
+  <link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#0b1837" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="3D Druck" />
+  
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="page-header">
+      <div>
+        <h1>3D Druck Verwaltung</h1>
+        <p class="muted">Bestellungen und Bestand zentral verwalten</p>
+      </div>
+
+      <div class="header-actions">
+        <button id="undoBtn" class="btn btn-outline">Letzte Aktion rückgängig</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Neue Eingabe</h2>
+        </div>
+
+        <div class="mode-switch">
+          <button class="mode-btn active" data-mode="order">Bestellung</button>
+          <button class="mode-btn" data-mode="stock">Bestand</button>
+        </div>
+
+        <div class="product-tabs">
+          <button class="product-tab active" data-product="rabbit">🐰 Hase</button>
+          <button class="product-tab" data-product="lumi">✨ Lumi</button>
+          <button class="product-tab" data-product="text">✍️ Schriftzug</button>
+          <button class="product-tab" data-product="other">＋ Weitere</button>
+        </div>
+
+        <form id="itemForm" novalidate>
+          <div id="orderFields">
+            <div class="form-grid">
+              <div class="field">
+                <label for="customerName">Kundenname *</label>
+                <input id="customerName" type="text" placeholder="z. B. Familie Müller" />
+                <small class="error" data-error-for="customerName"></small>
+              </div>
+
+              <div class="field">
+                <label for="description">Beschreibung</label>
+                <textarea id="description" rows="3" placeholder="Optional"></textarea>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Priorität *</label>
+              <div class="choice-row" id="priorityChoices">
+                <button type="button" class="choice-btn" data-value="Sehr wichtig">Sehr wichtig</button>
+                <button type="button" class="choice-btn active" data-value="Wichtig">Wichtig</button>
+                <button type="button" class="choice-btn" data-value="Nicht wichtig">Nicht wichtig</button>
+              </div>
+              <small class="error" data-error-for="priority"></small>
+            </div>
+          </div>
+
+          <div id="productSpecificArea"></div>
+
+          <div class="form-actions">
+            <button type="button" id="primaryActionBtn" class="btn btn-primary">+ Position hinzufügen</button>
+          </div>
+        </form>
+
+        <div id="draftSummary" class="draft-summary">
+          <div class="draft-summary-head">
+            <h3>Aktuelle Sammlung</h3>
+            <div class="draft-stats">
+              <span id="draftModeLabel" class="badge">Bestellung</span>
+              <span id="draftItemCount">0 Positionen</span>
+              <span id="draftTotalPrice">0,00 €</span>
+            </div>
+          </div>
+
+          <div id="draftItems" class="draft-items empty-state">
+            Noch keine Positionen hinzugefügt.
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="saveCollectionBtn" class="btn btn-dark">Sammlung speichern</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Übersicht</h2>
+        </div>
+
+        <div class="overview-cards">
+          <div class="overview-card">
+            <strong>Offene Bestellungen</strong>
+            <div id="openOrderTotal">0,00 €</div>
+          </div>
+          <div class="overview-card">
+            <strong>Archiv</strong>
+            <div id="archiveTotal">0,00 €</div>
+          </div>
+        </div>
+
+        <div class="accordion-group">
+          <details open>
+            <summary>Bestellungen</summary>
+
+            <div class="toolbar">
+              <input id="orderSearch" type="text" placeholder="Nach Kunde oder Produkt suchen..." />
+              <select id="orderPriorityFilter">
+                <option value="">Alle Prioritäten</option>
+                <option value="Sehr wichtig">Sehr wichtig</option>
+                <option value="Wichtig">Wichtig</option>
+                <option value="Nicht wichtig">Nicht wichtig</option>
+              </select>
+              <select id="orderStatusFilter">
+                <option value="">Alle Status</option>
+                <option value="Offen">Offen</option>
+                <option value="In Produktion">In Produktion</option>
+                <option value="Fertig">Fertig</option>
+              </select>
+            </div>
+
+            <div id="ordersList" class="list-container"></div>
+          </details>
+
+          <details>
+            <summary>Bestand</summary>
+            <div class="toolbar toolbar-single">
+              <input id="stockSearch" type="text" placeholder="Nach Produkt suchen..." />
+            </div>
+            <div id="stockList" class="list-container"></div>
+          </details>
+
+          <details>
+            <summary>Archiv</summary>
+            <div id="archiveList" class="list-container"></div>
+          </details>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- COLOR MODAL -->
+  <dialog id="colorDialog" class="modal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>Farbe auswählen</h3>
+        <button id="closeColorDialog" class="icon-btn" type="button">✕</button>
+      </div>
+
+      <div class="modal-body modal-body-scroll">
+        <div class="field">
+          <label for="colorNameInput">Name / Bezeichnung</label>
+          <input id="colorNameInput" type="text" placeholder="z. B. Körperfarbe, Rand, Buchstaben..." />
+        </div>
+
+        <div>
+          <p class="section-label">Vorgefertigte Farben</p>
+          <div id="presetColors" class="preset-colors"></div>
+        </div>
+
+        <div>
+          <p class="section-label">Favoriten</p>
+          <div id="favoriteColors" class="preset-colors"></div>
+        </div>
+
+        <div class="field">
+          <label for="customColorPicker">Eigene Farbe wählen</label>
+          <input id="customColorPicker" type="color" value="#d4af37" />
+        </div>
+
+        <div class="color-preview-box">
+          <div class="color-preview-text">
+            <strong>Vorschau / Favoritenname</strong>
+            <input id="favoriteColorNameInput" type="text" placeholder="z. B. Holz, Dunkelblau..." />
+          </div>
+          <div id="liveColorPreview" class="live-color-preview"></div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" id="toggleFavoriteColorBtn" class="btn btn-outline">Als Favorit speichern</button>
+        <button type="button" id="applyColorBtn" class="btn btn-primary">Übernehmen</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- PRICE MODAL -->
+  <dialog id="priceDialog" class="modal">
+    <div class="modal-box modal-box-small">
+      <div class="modal-head">
+        <h3 id="priceDialogTitle">Preis eingeben</h3>
+        <button id="closePriceDialog" class="icon-btn" type="button">✕</button>
+      </div>
+
+      <div class="modal-body modal-body-scroll">
+        <div class="price-display-large" id="priceDialogValue">0,00 €</div>
+
+        <div class="price-keypad">
+          <button type="button" class="price-key" data-key="1">1</button>
+          <button type="button" class="price-key" data-key="2">2</button>
+          <button type="button" class="price-key" data-key="3">3</button>
+          <button type="button" class="price-key" data-key="4">4</button>
+          <button type="button" class="price-key" data-key="5">5</button>
+          <button type="button" class="price-key" data-key="6">6</button>
+          <button type="button" class="price-key" data-key="7">7</button>
+          <button type="button" class="price-key" data-key="8">8</button>
+          <button type="button" class="price-key" data-key="9">9</button>
+          <button type="button" class="price-key" data-key=",">,</button>
+          <button type="button" class="price-key" data-key="0">0</button>
+          <button type="button" class="price-key danger" data-key="back">⌫</button>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" id="clearPriceBtn" class="btn btn-outline">Leeren</button>
+        <button type="button" id="applyPriceBtn" class="btn btn-primary">OK</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- CONFIRM MODAL -->
+  <dialog id="confirmDialog" class="modal">
+    <div class="modal-box modal-box-small">
+      <div class="modal-head">
+        <h3>Bestätigen</h3>
+        <button id="closeConfirmDialog" class="icon-btn" type="button">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <p id="confirmText">Bist du sicher?</p>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" id="confirmCancelBtn" class="btn btn-outline">Abbrechen</button>
+        <button type="button" id="confirmOkBtn" class="btn btn-primary">Bestätigen</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>
