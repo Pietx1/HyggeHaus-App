@@ -197,6 +197,19 @@ function clearErrors() {
   document.querySelectorAll(".input-error").forEach((el) => el.classList.remove("input-error"));
 }
 
+function clearActiveColorChoice() {
+  document.querySelectorAll(".preset-color-btn").forEach((btn) => {
+    btn.classList.remove("active-color-choice");
+  });
+}
+
+function setActiveColorChoice(buttonEl) {
+  clearActiveColorChoice();
+  if (buttonEl) {
+    buttonEl.classList.add("active-color-choice");
+  }
+}
+
 function showError(fieldName, message) {
   const errorEl = document.querySelector(`[data-error-for="${fieldName}"]`);
   if (errorEl) errorEl.textContent = message;
